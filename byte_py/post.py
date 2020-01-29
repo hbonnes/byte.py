@@ -123,3 +123,14 @@ class Post:
                     if delete_json['success'] == 1:
                         return True
                 return False
+
+    async def rebyte(self):
+        async with aiohttp.ClientSession() as rebyte_session:
+            rebyte_data = {'postID': self.id}
+            async with rebyte_session.post(config.REBYTE_ENDPOINT, data=json.dumps(rebyte_data),
+                                           headers=self.headers) as rebyte_response:
+                if rebyte_response.status == 200:
+                    rebyte_json = await rebyte_response.json()
+                    if rebyte_json['success'] == 1:
+                        return True
+                return False

@@ -34,6 +34,64 @@ class Account:
     def __repr__(self):
         return 'Account(): id="{0}"'.format(self.id, self.username)
 
+    async def follow(self):
+        async with aiohttp.ClientSession() as follow_session:
+            async with follow_session.put(config.OTHER_ACCOUNT_FOLLOW_ENDPOINT.format(self.id),
+                                          headers=self.headers) as follow_response:
+                if follow_response.status == 200:
+                    follow_json = await follow_response.json()
+                    if follow_json['success'] == 1:
+                        return True
+                return False
+
+    async def unfollow(self):
+        async with aiohttp.ClientSession() as follow_session:
+            async with follow_session.delete(config.OTHER_ACCOUNT_FOLLOW_ENDPOINT.format(self.id),
+                                             headers=self.headers) as follow_response:
+                if follow_response.status == 200:
+                    follow_json = await follow_response.json()
+                    if follow_json['success'] == 1:
+                        return True
+                return False
+
+    async def report(self):
+        async with aiohttp.ClientSession() as report_session:
+            report_data = {'reason': 'notinterested'}
+            async with report_session.post(config.OTHER_ACCOUNT_REPORT_ENDPOINT.format(self.id), data=json.dumps(report_data), headers=self.headers) as report_response:
+                if report_response.status == 200:
+                    report_json = await report_response.json()
+                    if report_json['success'] == 1:
+                        return True
+                return False
+
+    async def block(self):
+        async with aiohttp.ClientSession() as block_session:
+            async with block_session.put(config.OTHER_ACCOUNT_BLOCK_ENDPOINT.format(self.id), headers=self.headers) as block_response:
+                if block_response.status == 200:
+                    block_json = await block_response.json()
+                    if block_json['success'] == 1:
+                        return True
+                return False
+
+    async def unblock(self):
+        async with aiohttp.ClientSession() as block_session:
+            async with block_session.delete(config.OTHER_ACCOUNT_BLOCK_ENDPOINT.format(self.id), headers=self.headers) as block_response:
+                if block_response.status == 200:
+                    block_json = await block_response.json()
+                    if block_json['success'] == 1:
+                        return True
+                return False
+
+    async def get_posts(self):
+        async with aiohttp.ClientSession() as post_session:
+            async with post_session.get(config.OTHER_ACCOUNT_POSTS_ENDPOINT.format(self.id), headers=self.headers) as post_response:
+                if post_response.status == 200:
+                    post_json = await post_response.json()
+                    if post_json['success'] == 1:
+                        post_collection = post.PostCollection(post_json['data'], self.headers)
+                        return post_collection
+                return None
+
 
 class User(Account):
 
@@ -93,6 +151,19 @@ class User(Account):
                         posts = post.PostCollection(post_json['data'], self.headers)
 
                         return posts
+                return None
+
+    async def get_blocking(self):
+        async with aiohttp.ClientSession() as blocking_session:
+            async with blocking_session.get(config.ACCOUNT_BLOCKING, headers=self.headers) as blocking_response:
+                if blocking_response.status == 200:
+                    blocking_json = await blocking_response.json()
+                    if blocking_json['success'] == 1:
+                        accounts = []
+                        for account in blocking_json['data']['accounts']:
+                            account_object = Account(account, self.headers)
+                            accounts.append(account_object)
+                        return accounts
                 return None
 
 

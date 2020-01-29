@@ -47,7 +47,7 @@ class ByteClient:
                         self.user = user
 
                         return user
-                return False
+                return None
 
     async def get_activity(self):
         async with aiohttp.ClientSession() as activity_session:
@@ -69,7 +69,7 @@ class ByteClient:
                     if timeline_json['success'] == 1:
                         post_collection = post.PostCollection(timeline_json['data'], self.headers)
                         return post_collection
-                return False
+                return None
 
     async def get_latest(self):
         async with aiohttp.ClientSession() as latest_session:
@@ -79,7 +79,17 @@ class ByteClient:
                     if latest_response['success'] == 1:
                         post_collection = post.PostCollection(latest_response['data'], self.headers)
                         return post_collection
-                return False
+                return None
+
+    async def get_account(self, id):
+        async with aiohttp.ClientSession() as account_session:
+            async with account_session.get(config.OTHER_ACCOUNT_ENDPOINT.format(id), headers=self.headers) as account_response:
+                if account_response.status == 200:
+                    account_json = await account_response.json()
+                    if account_json['success'] == 1:
+                        account_object = account.Account(account_json['data'], self.headers)
+                        return account_object
+                return None
 
 
 class Token:
