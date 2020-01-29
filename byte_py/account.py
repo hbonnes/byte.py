@@ -6,85 +6,119 @@ import byte_py.post as post
 
 
 class Account:
+    """
+    This class represents a Byte Account object and functions
 
-    def __init__(self, json_data, headers):
+    Attributes:
+        json_data (string): The JSON representation of the data object
+        client (ByteClient): The client object that holds the HTTP session
+    """
 
-        self.background_color = json_data['backgroundColor']
-        self.follower_count = json_data['followerCount']
-        self.following_count = json_data['followingCount']
-        self.foreground_color = json_data['foregroundColor']
-        self.id = json_data['id']
-        self.is_channel = json_data['isChannel']
-        self.loop_count = json_data['loopCount']
-        self.loop_consumed_count = json_data['loopsConsumedCount']
-        self.registration_date = datetime.datetime.fromtimestamp(json_data['registrationDate'])
-        self.username = json_data['username']
-        self.headers = headers
+    def __init__(self, json_data, client):
 
-        if 'displayName' in json_data:
-            self.display_name = json_data['displayName']
-        else:
-            self.display_name = None
-
-        if 'avatarURL' in json_data:
-            self.avatar_url = json_data['avatarURL']
-        else:
-            self.avatar_url = None
+        self.json_data = json_data
+        self.client = client
 
     def __repr__(self):
-        return 'Account(): id="{0}"'.format(self.id, self.username)
+        return 'Account(): id="{0}"'.format(self.get_id(), self.get_username())
+
+    """
+    Returns the string ID of a user.
+    """
+
+    def get_id(self):
+        return self.json_data['id']
+
+    """
+    Returns the string username of a user.
+    """
+
+    def get_username(self):
+        return self.json_data['username']
+
+    """
+    Follows the Byte account.
+    
+    Returns:
+        bool: Returns true if the request succeeded, otherwise returns false.
+    """
 
     async def follow(self):
-        async with aiohttp.ClientSession() as follow_session:
-            async with follow_session.put(config.OTHER_ACCOUNT_FOLLOW_ENDPOINT.format(self.id),
-                                          headers=self.headers) as follow_response:
-                if follow_response.status == 200:
-                    follow_json = await follow_response.json()
-                    if follow_json['success'] == 1:
-                        return True
-                return False
+        follow_json = await self.client.create_request("PUT", config.ACCOUNT_FOLLOW_ENDPOINT.format(self.get_id()))
+        if follow_json['success'] == 1:
+            return True
+        else:
+            return False
+
+    """
+    Unfollows the Byte account.
+
+    Returns:
+        bool: Returns true if the request succeeded, otherwise returns false.
+    """
 
     async def unfollow(self):
-        async with aiohttp.ClientSession() as follow_session:
-            async with follow_session.delete(config.OTHER_ACCOUNT_FOLLOW_ENDPOINT.format(self.id),
-                                             headers=self.headers) as follow_response:
-                if follow_response.status == 200:
-                    follow_json = await follow_response.json()
-                    if follow_json['success'] == 1:
-                        return True
-                return False
+        follow_json = await self.client.create_request("DELETE", config.ACCOUNT_FOLLOW_ENDPOINT.format(self.get_id()))
+        if follow_json['success'] == 1:
+            return True
+        else:
+            return False
+
+    """
+    Reports the Byte account.
+    
+    Returns:
+        bool: Returns true if the request succeeded, otherwise returns false.
+    """
 
     async def report(self):
-        async with aiohttp.ClientSession() as report_session:
-            report_data = {'reason': 'notinterested'}
-            async with report_session.post(config.OTHER_ACCOUNT_REPORT_ENDPOINT.format(self.id), data=json.dumps(report_data), headers=self.headers) as report_response:
-                if report_response.status == 200:
-                    report_json = await report_response.json()
-                    if report_json['success'] == 1:
-                        return True
-                return False
+        report_data = {'reason': 'notinterested'}
+        report_json = await self.client.create_request("POST", config.ACCOUNT_REPORT_ENDPOINT.format(self.get_id()),
+                                                       json.dumps(report_data))
+        if report_json['success'] == 1:
+            return True
+        else:
+            return False
+
+    """
+    Blocks the Byte account.
+    
+    Returns:
+        bool: Returns true if the request succeeded, otherwise returns false.
+    """
 
     async def block(self):
-        async with aiohttp.ClientSession() as block_session:
-            async with block_session.put(config.OTHER_ACCOUNT_BLOCK_ENDPOINT.format(self.id), headers=self.headers) as block_response:
-                if block_response.status == 200:
-                    block_json = await block_response.json()
-                    if block_json['success'] == 1:
-                        return True
-                return False
+        block_json = await self.client.create_request("PUT", config.ACCOUNT_BLOCK_ENDPOINT.format(self.get_id()))
+        if block_json['success'] == 1:
+            return True
+        else:
+            return False
+
+    """
+    Unblocks the Byte account.
+    
+    Returns:
+        bool: Returns true if the request succeeded, otherwise returns false.
+    """
 
     async def unblock(self):
-        async with aiohttp.ClientSession() as block_session:
-            async with block_session.delete(config.OTHER_ACCOUNT_BLOCK_ENDPOINT.format(self.id), headers=self.headers) as block_response:
-                if block_response.status == 200:
-                    block_json = await block_response.json()
-                    if block_json['success'] == 1:
-                        return True
-                return False
+        block_json = await self.client.create_request("DELETE", config.ACCOUNT_BLOCK_ENDPOINT.format(self.get_id()))
+        if block_json['success'] == 1:
+            return True
+        else:
+            return False
+
+    """
+    Gets the Posts of the Byte account.
+    
+    Returns:
+        PostCollection: Returns a collection of Accounts and Posts from the user.
+    """
 
     async def get_posts(self):
         async with aiohttp.ClientSession() as post_session:
-            async with post_session.get(config.OTHER_ACCOUNT_POSTS_ENDPOINT.format(self.id), headers=self.headers) as post_response:
+            async with post_session.get(config.ACCOUNT_POSTS_ENDPOINT.format(self.id),
+                                        headers=self.headers) as post_response:
                 if post_response.status == 200:
                     post_json = await post_response.json()
                     if post_json['success'] == 1:
@@ -96,19 +130,12 @@ class Account:
 class User(Account):
 
     async def set_data(self, data):
-        async with aiohttp.ClientSession() as set_data_session:
-            async with set_data_session.put(config.ACCOUNT_ENDPOINT, data=json.dumps(data),
-                                            headers=self.headers) as set_data_response:
-                if set_data_response == 200:
-                    set_data_json = await set_data_response.json()
-                    print(set_data_json)
-                    if set_data_json['success'] == 1:
-                        return True
-                    else:
-                        error_code = set_data_json['error']['code']
-                        error_message = set_data_json['error']['message']
-                        print('[ERROR] Error code {0}: {1}'.format(error_code, error_message))
-                return False
+        request_json = await self.client.create_request("PUT", config.ME_ENDPOINT, json.dumps(data))
+        print(request_json)
+        if request_json['success'] == 1:
+            return True
+        else:
+            return False
 
     async def set_color(self, color_id):
         color_set_data = {'colorScheme': color_id}
@@ -127,24 +154,21 @@ class User(Account):
         return await self.set_data(bio_set_data)
 
     async def get_colors(self):
-        async with aiohttp.ClientSession() as color_session:
-            async with color_session.get(config.ACCOUNT_COLOR_ENDPOINT, headers=self.headers) as color_response:
-                if color_response.status == 200:
-                    color_json = await color_response.json()
-                    if color_json['success'] == 1:
+        color_json = await self.client.create_request("GET", config.ME_COLOR_ENDPOINT)
+        if color_json['success'] == 1:
 
-                        colors = {}
-                        for color in color_json['data']['colors']:
-                            color_object = Color(color)
-                            colors[color_object.id] = color_object
+            colors = {}
+            for color in color_json['data']['colors']:
+                color_object = Color(color)
+                colors[color_object.id] = color_object
 
-                        return colors
-
-                return None
+            return colors
+        else:
+            return None
 
     async def get_posts(self):
         async with aiohttp.ClientSession() as post_session:
-            async with post_session.get(config.ACCOUNT_POST_ENDPOINT, headers=self.headers) as post_response:
+            async with post_session.get(config.ME_POST_ENDPOINT, headers=self.headers) as post_response:
                 if post_response.status == 200:
                     post_json = await post_response.json()
                     if post_json['success'] == 1:
@@ -154,17 +178,15 @@ class User(Account):
                 return None
 
     async def get_blocking(self):
-        async with aiohttp.ClientSession() as blocking_session:
-            async with blocking_session.get(config.ACCOUNT_BLOCKING, headers=self.headers) as blocking_response:
-                if blocking_response.status == 200:
-                    blocking_json = await blocking_response.json()
-                    if blocking_json['success'] == 1:
-                        accounts = []
-                        for account in blocking_json['data']['accounts']:
-                            account_object = Account(account, self.headers)
-                            accounts.append(account_object)
-                        return accounts
-                return None
+        blocking_json = await self.client.create_request("GET", config.BLOCKING_ENDPOINT)
+        if blocking_json['success'] == 1:
+            accounts = []
+            for account_json in blocking_json['data']['accounts']:
+                account = Account(account_json, self.client)
+                accounts.append(account)
+            return accounts
+        else:
+            return []
 
 
 class Color:
@@ -176,3 +198,5 @@ class Color:
 
     def __repr__(self):
         return 'Color() background="{0}", foreground="{1}"'.format(self.background, self.foreground)
+
+# s1l0x
